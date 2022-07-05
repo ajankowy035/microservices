@@ -1,15 +1,16 @@
 import express, { Request, Response } from "express";
 import { body } from "express-validator";
 import jwt from "jsonwebtoken";
-import { User } from "../models/user";
-import { BadRequestError } from "./../errors/bad-request-error";
-import { validateRequest } from "../middlewares/validate-request";
+
 import { Password } from "../services/passwrod";
+import { User } from "../models/user";
+import { validateRequest } from "../middlewares/validate-request";
+import { BadRequestError } from "../errors/bad-request-error";
 
 const router = express.Router();
 
 router.post(
-  "/api/users/login",
+  "/api/users/signin",
   [
     body("email").isEmail().withMessage("Email must be valid"),
     body("password")
@@ -18,38 +19,37 @@ router.post(
       .withMessage("You must supply a password"),
   ],
   validateRequest,
-
   async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
-    try {
-      const user = await User.findOne({ email });
-      if (!user) {
-        throw new BadRequestError("Email is not assigned to any account");
-      }
-
-      const matchPassword = Password.compare(user.password, password);
-      console.log(matchPassword);
-      if (!matchPassword) {
-        throw new BadRequestError("Invalid password");
-      }
-
-      const userJwt = jwt.sign(
-        {
-          id: user.id,
-          email: user.email,
-        },
-        process.env.JWT_KEY!
-      );
-
-      req.session = {
-        jwt: userJwt,
-      };
-
-      res.send(user);
-    } catch (error) {
-      throw new BadRequestError("User not found");
+    const existingUser = await User.findOne({ email });
+    if (!existingUser) {
+      throw new BadRequestError("Invalid credentials");
     }
+
+    const passwordsMatch = await Password.compare(
+      existingUser.password,
+      password
+    );
+    if (!passwordsMatch) {
+      throw new BadRequestError("Invalid Credentials");
+    }
+
+    // Generate JWT
+    const userJwt = jwt.sign(
+      {
+        id: existingUser.id,
+        email: existingUser.email,
+      },
+      process.env.JWT_KEY!
+    );
+
+    // Store it on session object
+    req.session = {
+      jwt: userJwt,
+    };
+
+    res.status(200).send(existingUser);
   }
 );
 

@@ -6,14 +6,15 @@
   "scripts": {
     "start": "ts-node-dev src/index.ts",
     "test": "jest",
-    "test:watch": "jest --watchAll --no-cache"
+    "test:watch": "jest --watchAll --no-cache --runInBand"
   },
   "jest": {
-    "preset": "jest",
-    "testEnviroment": "node",
+    "preset": "ts-jest",
+    "testEnvironment": "node",
     "setupFilesAfterEnv": [
       "./src/test/setup.ts"
-    ]
+    ],
+    "verbose": true
   },
   "keywords": [],
   "author": "",
